@@ -2,7 +2,7 @@ import { isValidElement, cloneElement, Component, Children } from 'react';
 import PropTypes from 'prop-types';
 import { MessageArgument } from 'fluent/compat';
 
-import { isLocalization } from './localization';
+import { isReactLocalization } from './localization';
 
 /*
  * A Fluent argument type for React elements.
@@ -29,7 +29,7 @@ class ElementArgument extends MessageArgument {
  * are React elements into `ElementArgument` instances.
  *
  */
-function withElements(props) {
+function toArguments(props) {
   const args = {};
 
   for (const propname of Object.keys(props)) {
@@ -73,94 +73,60 @@ function withElements(props) {
  *  source code.
  */
 export default class Localized extends Component {
-  constructor(props, context) {
-    super(props, context);
-    this.state = {
-      mcx: this.getMessageContext()
-    };
-  }
-
   componentDidMount() {
     const { l10n } = this.context;
-    l10n.subscribe(this);
+
+    if (l10n) {
+      l10n.subscribe(this);
+    }
   }
 
   componentWillUnmount() {
     const { l10n } = this.context;
-    l10n.unsubscribe(this);
-  }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.id !== this.props.id) {
-      this.setState({ mcx: this.getMessageContext() });
+    if (l10n) {
+      l10n.unsubscribe(this);
     }
-  }
-
-  /*
-   * Find the best `MessageContext` in the `Localization` exposed to this
-   * component.
-   */
-  getMessageContext() {
-    const { l10n } = this.context;
-
-    if (!l10n) {
-      throw new Error(
-        'Localized must be a descendant of a LocalizationProvider.'
-      );
-    }
-
-    const { id } = this.props;
-
-    if (!id) {
-      return null;
-    }
-
-    return l10n.getMessageContext(id);
   }
 
   /*
    * Rerender this component in a new language.
    */
   relocalize() {
-    // When the `Localization`'s fallback chain changes, update the
-    // `MessageContext` instance cached in the component's state and
-    // force-render.
-    this.setState({ mcx: this.getMessageContext() });
+    // When the `ReactLocalization`'s fallback chain changes, update the
+    // component.
     this.forceUpdate();
   }
 
   render() {
+    const { l10n } = this.context;
     const { id, children } = this.props;
-    const { mcx } = this.state;
     const elem = Children.only(children);
 
+    if (!l10n) {
+      // Use the wrapped component as fallback.
+      return elem;
+    }
+
+    const mcx = l10n.getMessageContext(id);
+
     if (mcx === null) {
-      // Use the wrapped component as the ultimate fallback.
+      // Use the wrapped component as fallback.
       return elem;
     }
 
     const msg = mcx.getMessage(id);
-    const args = withElements(this.props);
-    const parts = mcx.formatToParts(msg, args) || [];
-
-    // Format the parts using the current `MessageContext` instance.
-    const childValues = parts.map(part => part.valueOf(mcx));
-
-    if (msg.attrs) {
-      var attrs = {};
-      for (const name of Object.keys(msg.attrs)) {
-        attrs[name] = mcx.format(msg.attrs[name], args);
-      }
-    }
+    const args = toArguments(this.props);
+    const { parts, attrs } = l10n.formatCompound(mcx, msg, args);
 
     // The formatted parts can be passed to `cloneElements` as arguments.  They
     // will be used as children of the cloned element.
-    return cloneElement(elem, attrs, ...childValues);
+    return cloneElement(elem, attrs, ...parts);
   }
 }
 
 Localized.contextTypes = {
-  l10n: isLocalization
+  l10n: isReactLocalization
 };
 
 Localized.propTypes = {

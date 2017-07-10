@@ -2,12 +2,26 @@
 
 ## Unreleased
 
-  - Upgrade to fluent 0.4.0.
+  - …
+
+## fluent-react 0.4.1 (June 30, 2017)
+
+  - Relax the constraint on Localized only being valid as descendants of
+    LocalizationProvider.
+
+  - Export ReactLocalization and isReactLocalization prop-type checker.
+
+## fluent-react 0.4.0 (June 22, 2017)
+
+  - Upgrade to fluent 0.4.1.
+
+  - Removed caching in `Localized`'s state until we know more about performance
+    bottlenecks.
 
   - Added the `withLocalization` HOC.
 
     It may be used to connect a component with a Localization. It injects the
-    `formatString` prop.
+    `getString` prop.
 
   - The compat build is now transpiled using rollup-plugin-babel.
 
