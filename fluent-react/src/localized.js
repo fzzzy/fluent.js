@@ -1,3 +1,5 @@
+
+import parser from 'html-react-parser';
 import { isValidElement, cloneElement, Component, Children } from 'react';
 import PropTypes from 'prop-types';
 import { MessageArgument } from 'fluent/compat';
@@ -117,6 +119,10 @@ export default class Localized extends Component {
 
     const msg = mcx.getMessage(id);
     const args = toArguments(this.props);
+    if (this.props.parseHtmlNoTemplates) {
+      return cloneElement(elem, {}, parser(msg));
+    }
+
     const { parts, attrs } = l10n.formatCompound(mcx, msg, args);
 
     // The formatted parts can be passed to `cloneElements` as arguments.  They
